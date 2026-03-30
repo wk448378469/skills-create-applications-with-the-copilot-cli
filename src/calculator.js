@@ -1,11 +1,14 @@
 #!/usr/bin/env node
 
 /**
- * Basic calculator operations supported by this CLI:
+ * Calculator operations supported by this CLI:
  * - addition
  * - subtraction
  * - multiplication
  * - division
+ * - modulo
+ * - power
+ * - square root
  */
 
 function addition(a, b) {
@@ -28,7 +31,28 @@ function division(a, b) {
   return a / b;
 }
 
+function modulo(a, b) {
+  if (b === 0) {
+    throw new Error('Modulo by zero is not allowed.');
+  }
+
+  return a % b;
+}
+
+function power(base, exponent) {
+  return base ** exponent;
+}
+
+function squareRoot(n) {
+  if (n < 0) {
+    throw new Error('Square root of a negative number is not allowed.');
+  }
+
+  return Math.sqrt(n);
+}
+
 function normalizeOperation(operation) {
+  const normalizedOperation = String(operation).toLowerCase();
   const operations = {
     add: 'addition',
     addition: 'addition',
@@ -43,9 +67,22 @@ function normalizeOperation(operation) {
     divide: 'division',
     division: 'division',
     '/': 'division',
+    mod: 'modulo',
+    modulo: 'modulo',
+    '%': 'modulo',
+    power: 'power',
+    pow: 'power',
+    exponentiation: 'power',
+    '^': 'power',
+    '**': 'power',
+    sqrt: 'squareRoot',
+    squareroot: 'squareRoot',
+    'square-root': 'squareRoot',
+    'square_root': 'squareRoot',
+    '√': 'squareRoot',
   };
 
-  return operations[operation];
+  return operations[normalizedOperation];
 }
 
 function parseNumber(value, label) {
@@ -68,31 +105,64 @@ function calculate(operation, a, b) {
       return multiplication(a, b);
     case 'division':
       return division(a, b);
+    case 'modulo':
+      return modulo(a, b);
+    case 'power':
+      return power(a, b);
+    case 'squareRoot':
+      return squareRoot(a);
     default:
       throw new Error(
-        `Unsupported operation "${operation}". Use +, -, *, /, add, subtract, multiply, or divide.`
+        `Unsupported operation "${operation}". Use +, -, *, /, %, ^, sqrt, add, subtract, multiply, divide, modulo, power, or squareRoot.`
       );
   }
 }
 
 function getUsageText() {
   return [
-    'Usage: node src/calculator.js <operation> <number1> <number2>',
-    'Supported operations: addition (+), subtraction (-), multiplication (*), division (/)',
+    'Usage:',
+    '  node src/calculator.js <operation> <number1> <number2>',
+    '  node src/calculator.js <operation> <number>',
+    'Supported operations: addition (+), subtraction (-), multiplication (*), division (/), modulo (%), power (^), square root (sqrt)',
     'Examples:',
     '  node src/calculator.js + 7 3',
     '  node src/calculator.js divide 12 4',
+    '  node src/calculator.js % 10 3',
+    '  node src/calculator.js ^ 2 5',
+    '  node src/calculator.js sqrt 81',
   ].join('\n');
 }
 
 function runCli(argv = process.argv.slice(2)) {
-  if (argv.length !== 3) {
+  if (argv.length < 2 || argv.length > 3) {
     throw new Error(getUsageText());
   }
 
-  const [operation, rawA, rawB] = argv;
-  const a = parseNumber(rawA, 'first number');
-  const b = parseNumber(rawB, 'second number');
+  const [operation, ...rawOperands] = argv;
+  const normalizedOperation = normalizeOperation(operation);
+
+  if (!normalizedOperation) {
+    throw new Error(
+      `Unsupported operation "${operation}". Use +, -, *, /, %, ^, sqrt, add, subtract, multiply, divide, modulo, power, or squareRoot.`
+    );
+  }
+
+  const requiresOneOperand = normalizedOperation === 'squareRoot';
+
+  if (
+    (requiresOneOperand && rawOperands.length !== 1) ||
+    (!requiresOneOperand && rawOperands.length !== 2)
+  ) {
+    throw new Error(getUsageText());
+  }
+
+  const a = parseNumber(
+    rawOperands[0],
+    requiresOneOperand ? 'number' : 'first number'
+  );
+  const b = requiresOneOperand
+    ? undefined
+    : parseNumber(rawOperands[1], 'second number');
   const result = calculate(operation, a, b);
 
   console.log(result);
@@ -113,6 +183,9 @@ module.exports = {
   subtraction,
   multiplication,
   division,
+  modulo,
+  power,
+  squareRoot,
   calculate,
   runCli,
 };
